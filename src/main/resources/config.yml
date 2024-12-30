@@ -1,0 +1,29 @@
+[SkeletonKnight]
+  ModId = "SkeletonKnight"
+  
+  [[SkeletonKnight.Rewards]]
+    Rank = 1
+    Rewards = ["Diamond Sword", "Golden Apple", "Enchanted Bow"]
+  
+  [[SkeletonKnight.Rewards]]
+    Rank = 2
+    Rewards = ["Iron Sword", "Potion of Healing", "Shield"]
+  
+  [[SkeletonKnight.Rewards]]
+    Rank = 3
+    Rewards = ["Gold Ingots", "Diamond Pickaxe"]
+  
+  [ZombieWarrior]
+    ModId = "ZombieWarrior"
+  
+  [[ZombieWarrior.Rewards]]
+    Rank = 1
+    Rewards = ["Emerald Sword", "Healing Potion", "Zombie Head"]
+  
+  [[ZombieWarrior.Rewards]]
+    Rank = 2
+    Rewards = ["Iron Sword", "Potion of Strength"]
+  
+  [[ZombieWarrior.Rewards]]
+    Rank = 3
+    Rewards = ["Gold Bars", "Iron Pickaxe"]
