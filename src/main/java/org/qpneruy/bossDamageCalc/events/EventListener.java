@@ -1,5 +1,6 @@
 package org.qpneruy.bossDamageCalc.events;
 
+import io.lumine.mythic.bukkit.BukkitAPIHelper;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Bukkit;
@@ -11,7 +12,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.qpneruy.bossDamageCalc.BossDamageCalc;
-import org.qpneruy.bossDamageCalc.data.DamageMetaData;
+import org.qpneruy.bossDamageCalc.data.ConfigReader;
+import org.qpneruy.bossDamageCalc.data.DamageInfo;
 import org.qpneruy.bossDamageCalc.data.ModData;
 
 import java.util.*;
@@ -23,26 +25,30 @@ public class EventListener implements Listener {
     private final Logger logger;
     private static final int MAX_REWARD_RANK = 10;
 
-    private final Map<String, Map<UUID, DamageMetaData>> damageData;
+    private final Map<String, Map<UUID, DamageInfo>> damageData;
     private final BossDamageCalc plugin;
     private final ConsoleCommandSender console;
+    private final BukkitAPIHelper apiHelper;
+    private final ConfigReader data;
 
     public EventListener(BossDamageCalc plugin) {
         this.plugin = plugin;
         this.damageData = new ConcurrentHashMap<>();
         this.logger = plugin.getLogger();
         this.console = Bukkit.getConsoleSender();
+        this.apiHelper = MythicBukkit.inst().getAPIHelper();
+        this.data = plugin.data;
     }
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        if (!MythicBukkit.inst().getAPIHelper().isMythicMob(event.getEntity())) {
+        if (!apiHelper.isMythicMob(event.getEntity())) {
             return;
         }
 
-        ActiveMob mythicMob = MythicBukkit.inst().getAPIHelper().getMythicMobInstance(event.getEntity());
+        ActiveMob mythicMob = apiHelper.getMythicMobInstance(event.getEntity());
         String mobTypeId = mythicMob.getMobType();
-        Map<UUID, DamageMetaData> mobDamageData = damageData.get(mobTypeId);
+        Map<UUID, DamageInfo> mobDamageData = damageData.get(mobTypeId);
 
         if (mobDamageData == null || mobDamageData.isEmpty()) {
             return;
@@ -52,36 +58,36 @@ public class EventListener implements Listener {
         damageData.remove(mobTypeId);
     }
 
-    private void processRewards(ActiveMob mythicMob, Map<UUID, DamageMetaData> mobDamageData) {
-        ModData modData = plugin.data.getModData(mythicMob.getMobType());
+    private void processRewards(ActiveMob mythicMob, Map<UUID, DamageInfo> mobDamageData) {
+        ModData modData = data.getModData(mythicMob.getMobType());
         if (modData == null) {
             logger.warning("No ModData found for mob type: " + mythicMob.getMobType());
             return;
         }
 
-        List<DamageMetaData> sortedDamagers = sortByTotalDamage(mobDamageData);
+        List<DamageInfo> sortedDamagers = sortByTotalDamage(mobDamageData);
         Map<Integer, List<String>> rewards = modData.getRewards();
         displayLeaderboard(sortedDamagers);
 
         for (int rank = 0; rank < Math.min(sortedDamagers.size(), MAX_REWARD_RANK); rank++) {
-            DamageMetaData damageMetaData = sortedDamagers.get(rank);
-            Player player = damageMetaData.getPlayer();
+            DamageInfo damageInfo = sortedDamagers.get(rank);
+            Player player = damageInfo.getPlayer();
 
             if (player == null || !player.isOnline()) {
                 continue;
             }
 
-            distributeRewards(player, damageMetaData, mythicMob, rewards.get(rank + 1));
+            distributeRewards(player, damageInfo, mythicMob, rewards.get(rank + 1));
         }
     }
 
-    private void displayLeaderboard(List<DamageMetaData> sortedDamagers) {
+    private void displayLeaderboard(List<DamageInfo> sortedDamagers) {
         StringBuilder leaderboard = new StringBuilder();
         leaderboard.append("§e----------[BXH]---------\n");
 
         int topPlayers = Math.min(sortedDamagers.size(), 3);
         for (int i = 0; i < topPlayers; i++) {
-            DamageMetaData data = sortedDamagers.get(i);
+            DamageInfo data = sortedDamagers.get(i);
             Player player = data.getPlayer();
             if (player != null) {
                 leaderboard.append(String.format("    §f%d. §a%s §f- §c%.2f\n",
@@ -96,13 +102,13 @@ public class EventListener implements Listener {
                 player.sendMessage(finalMessage));
     }
 
-    private void distributeRewards(Player player, DamageMetaData damageMetaData, ActiveMob mythicMob, List<String> rewards) {
+    private void distributeRewards(Player player, DamageInfo damageInfo, ActiveMob mythicMob, List<String> rewards) {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
 
         player.sendMessage(String.format("You did %.2f damage to %s",
-                damageMetaData.getTotalDamage(),
+                damageInfo.getTotalDamage(),
                 mythicMob.getDisplayName()));
 
         rewards.forEach(reward -> Bukkit.dispatchCommand(console, reward.replace("{ten}", player.getName())));
@@ -116,13 +122,13 @@ public class EventListener implements Listener {
             return;
         }
 
-        if (!MythicBukkit.inst().getAPIHelper().isMythicMob(entity)) return;
+        if (!apiHelper.isMythicMob(entity)) return;
 
 
-        ActiveMob mythicMob = MythicBukkit.inst().getAPIHelper().getMythicMobInstance(entity);
+        ActiveMob mythicMob = apiHelper.getMythicMobInstance(entity);
         String mobTypeId = mythicMob.getMobType();
 
-        if (plugin.data.getModData(mobTypeId) == null) return;
+        if (data.getModData(mobTypeId) == null) return;
 
         updateDamageData(player, event.getDamage(), mobTypeId, mythicMob);
     }
@@ -130,10 +136,10 @@ public class EventListener implements Listener {
     private void updateDamageData(Player player, double damage, String mobTypeId, ActiveMob mythicMob) {
         damageData.computeIfAbsent(mobTypeId, k -> new ConcurrentHashMap<>());
 
-        Map<UUID, DamageMetaData> mobDamageData = damageData.get(mobTypeId);
-        DamageMetaData playerDamageData = mobDamageData.computeIfAbsent(
+        Map<UUID, DamageInfo> mobDamageData = damageData.get(mobTypeId);
+        DamageInfo playerDamageData = mobDamageData.computeIfAbsent(
                 player.getUniqueId(),
-                k -> new DamageMetaData(player, plugin.data.getModData(mobTypeId))
+                k -> new DamageInfo(player, data.getModData(mobTypeId))
         );
 
         playerDamageData.incrementDamage(damage);
@@ -145,7 +151,7 @@ public class EventListener implements Listener {
         }
     }
 
-    private static List<DamageMetaData> sortByTotalDamage(Map<UUID, DamageMetaData> map) {
+    private static List<DamageInfo> sortByTotalDamage(Map<UUID, DamageInfo> map) {
         return map.values()
                 .stream()
                 .sorted(Collections.reverseOrder())
@@ -154,7 +160,7 @@ public class EventListener implements Listener {
 
     public void cleanup() {
         damageData.values().forEach(mobData ->
-                mobData.values().forEach(DamageMetaData::cleanup));
+                mobData.values().forEach(DamageInfo::cleanup));
         damageData.clear();
 
         logger.info("EventListener resources cleaned up successfully");

@@ -6,13 +6,13 @@ import org.bukkit.entity.Player;
 import java.util.UUID;
 
 @Getter
-public class DamageMetaData implements Comparable<DamageMetaData> {
+public class DamageInfo implements Comparable<DamageInfo> {
     private final UUID playerId;
     private Player player;
     private ModData entityData;
     private volatile double totalDamage;
 
-    public DamageMetaData(Player player, ModData entityData) {
+    public DamageInfo(Player player, ModData entityData) {
         this.player = player;
         this.playerId = player.getUniqueId();
         this.entityData = entityData;
@@ -31,14 +31,14 @@ public class DamageMetaData implements Comparable<DamageMetaData> {
     }
 
     @Override
-    public int compareTo(DamageMetaData other) {
+    public int compareTo(DamageInfo other) {
         return Double.compare(this.totalDamage, other.totalDamage);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DamageMetaData that)) return false;
+        if (!(o instanceof DamageInfo that)) return false;
         return playerId.equals(that.playerId);
     }
 
