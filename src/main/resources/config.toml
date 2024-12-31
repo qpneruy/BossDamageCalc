@@ -13,8 +13,8 @@
     Rank = 3
     Rewards = ["Gold Ingots", "Diamond Pickaxe"]
   
-  [ZombieWarrior]
-    ModId = "ZombieWarrior"
+[ZombieWarrior]
+  ModId = "ZombieWarrior"
   
   [[ZombieWarrior.Rewards]]
     Rank = 1

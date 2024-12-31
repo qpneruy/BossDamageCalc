@@ -11,7 +11,7 @@ import java.util.Objects;
 public class BossDamageCalcCmd implements CommandExecutor {
 
     public BossDamageCalcCmd(BossDamageCalc plugin) {
-        Objects.requireNonNull(plugin.getCommand("BossDamageCalc")).setExecutor(this);
+        Objects.requireNonNull(plugin.getCommand("bossDamageCalc")).setExecutor(this);
     }
     @Override
     public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] args) {

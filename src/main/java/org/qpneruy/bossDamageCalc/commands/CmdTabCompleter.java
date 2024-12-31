@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public class CmdTabCompleter implements TabCompleter {
     public CmdTabCompleter(BossDamageCalc plugin) {
-        Objects.requireNonNull(plugin.getCommand("BossDamageCalc")).setTabCompleter(this);
+        Objects.requireNonNull(plugin.getCommand("bossDamageCalc")).setTabCompleter(this);
     }
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {

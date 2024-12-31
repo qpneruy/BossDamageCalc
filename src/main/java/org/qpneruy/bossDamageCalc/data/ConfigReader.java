@@ -10,39 +10,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-public class ConfigReader implements AutoCloseable {
+public class ConfigReader {
     private final ConcurrentHashMap<String, ModData> modDataMap;
     private static final int INITIAL_CAPACITY = 16;
     private final Path configPath;
     private final Logger logger;
-    private boolean isActive;
 
     public ConfigReader(BossDamageCalc plugin) {
         this.modDataMap = new ConcurrentHashMap<>(INITIAL_CAPACITY);
-        this.configPath = Path.of(plugin.getDataFolder().getPath(), "config.yml");
+        this.configPath = Path.of(plugin.getDataFolder().getPath(), "config.toml");
         this.logger = plugin.getLogger();
-        this.isActive = true;
         loadConfig();
     }
 
-    @Override
-    public void close() {
-        cleanup();
-    }
-
-    public void cleanup() {
-        if (!isActive) {
-            return;
-        }
-
-        modDataMap.values().forEach(ModData::cleanup);
-        modDataMap.clear();
-        isActive = false;
-        logger.info("ConfigReader resources cleaned up successfully");
-    }
     public void reload() {
         loadConfig();
     }
+
     private void loadConfig() {
         try {
             Map<String, Object> tables = new Toml().read(configPath.toFile()).toMap();
@@ -90,7 +74,9 @@ public class ConfigReader implements AutoCloseable {
         return modDataMap.get(modId);
     }
 
-    public void clearResources() {
+    public void cleanup() {
+        modDataMap.values().forEach(ModData::cleanup);
         modDataMap.clear();
+        logger.info("ConfigReader resources cleaned up successfully");
     }
 }

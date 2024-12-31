@@ -1,6 +1,5 @@
 package org.qpneruy.bossDamageCalc.events;
 
-import io.lumine.mythic.api.mobs.MythicMob;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.core.mobs.ActiveMob;
 import org.bukkit.Bukkit;
@@ -21,15 +20,18 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class EventListener implements Listener {
+    private final Logger logger;
     private static final int MAX_REWARD_RANK = 10;
+
     private final Map<String, Map<UUID, DamageMetaData>> damageData;
     private final BossDamageCalc plugin;
-    private final Logger logger;
+    private final ConsoleCommandSender console;
 
     public EventListener(BossDamageCalc plugin) {
         this.plugin = plugin;
         this.damageData = new ConcurrentHashMap<>();
         this.logger = plugin.getLogger();
+        this.console = Bukkit.getConsoleSender();
     }
 
     @EventHandler
@@ -59,7 +61,7 @@ public class EventListener implements Listener {
 
         List<DamageMetaData> sortedDamagers = sortByTotalDamage(mobDamageData);
         Map<Integer, List<String>> rewards = modData.getRewards();
-        displayLeaderboard(mythicMob, sortedDamagers);
+        displayLeaderboard(sortedDamagers);
 
         for (int rank = 0; rank < Math.min(sortedDamagers.size(), MAX_REWARD_RANK); rank++) {
             DamageMetaData damageMetaData = sortedDamagers.get(rank);
@@ -73,7 +75,7 @@ public class EventListener implements Listener {
         }
     }
 
-    private void displayLeaderboard(ActiveMob mythicMob, List<DamageMetaData> sortedDamagers) {
+    private void displayLeaderboard(List<DamageMetaData> sortedDamagers) {
         StringBuilder leaderboard = new StringBuilder();
         leaderboard.append("§e----------[BXH]---------\n");
 
@@ -88,7 +90,6 @@ public class EventListener implements Listener {
                         data.getTotalDamage()));
             }
         }
-
         leaderboard.append("§e------------------------");
         String finalMessage = leaderboard.toString();
         plugin.getServer().getOnlinePlayers().forEach(player ->
@@ -104,13 +105,9 @@ public class EventListener implements Listener {
                 damageMetaData.getTotalDamage(),
                 mythicMob.getDisplayName()));
 
-        rewards.forEach(reward -> executeCommand(reward.replace("{ten}", player.getName())));
+        rewards.forEach(reward -> Bukkit.dispatchCommand(console, reward.replace("{ten}", player.getName())));
     }
 
-    public static void executeCommand(String command) {
-        ConsoleCommandSender console = Bukkit.getServer().getConsoleSender();
-        Bukkit.dispatchCommand(console, command);
-    }
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
@@ -119,26 +116,15 @@ public class EventListener implements Listener {
             return;
         }
 
-        if (!MythicBukkit.inst().getAPIHelper().isMythicMob(entity)) {
-            return;
-        }
+        if (!MythicBukkit.inst().getAPIHelper().isMythicMob(entity)) return;
+
 
         ActiveMob mythicMob = MythicBukkit.inst().getAPIHelper().getMythicMobInstance(entity);
         String mobTypeId = mythicMob.getMobType();
 
-        if (!validateMobConfiguration(mobTypeId, player)) {
-            return;
-        }
+        if (plugin.data.getModData(mobTypeId) == null) return;
 
         updateDamageData(player, event.getDamage(), mobTypeId, mythicMob);
-    }
-
-    private boolean validateMobConfiguration(String mobTypeId, Player player) {
-        if (plugin.data.getModData(mobTypeId) == null) {
-            player.sendMessage("This mob is not in the config file: " + mobTypeId);
-            return false;
-        }
-        return true;
     }
 
     private void updateDamageData(Player player, double damage, String mobTypeId, ActiveMob mythicMob) {

@@ -9,9 +9,6 @@ import org.qpneruy.bossDamageCalc.data.ConfigReader;
 import org.qpneruy.bossDamageCalc.events.EventListener;
 
 import java.util.logging.Logger;
-
-import static org.bukkit.Bukkit.getLogger;
-
 public final class BossDamageCalc extends JavaPlugin {
     @Getter
     private static BossDamageCalc instance;
@@ -24,17 +21,20 @@ public final class BossDamageCalc extends JavaPlugin {
         if (!this.getDataFolder().exists()){
             if(!this.getDataFolder().mkdir())
                 getLogger().severe("Failed to create plugin directory.");
-            this.saveDefaultConfig();
         }
+        saveResource("config.toml", false);
         Hooks();
+
         new BossDamageCalcCmd(this);
         new CmdTabCompleter(this);
+
         this.getServer().getPluginManager().registerEvents(eventListener, this);
     }
 
     @Override
     public void onDisable() {
         eventListener.cleanup();
+        data.cleanup();
         instance = null;
     }
 
@@ -51,6 +51,6 @@ public final class BossDamageCalc extends JavaPlugin {
     private void StartupLog() {
         Logger sender = Bukkit.getLogger();
         sender.info("BossDamageCalc has been enabled!");
-        sender.info("Version: 2024.12.30          Author: qpneruy                    TaoSinhTonCore ");
+        sender.info("Version: 2024.12.30 - Author: qpneruy");
     }
 }

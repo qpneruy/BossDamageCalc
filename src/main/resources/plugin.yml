@@ -6,7 +6,7 @@ authors: [ qpneruy ]
 description: Plugin Tính Damage đánh Boss, Bản Quyền của TST - TaoSinhTon
 
 commands:
-  BossDamageCalc:
+  bossDamageCalc:
     description: "yep, BossDamageCalc"
-    aliases: [BossDamageCalc, bdac]
+    aliases: [bossDamageCalc, bdac]
     permission: BossDamageCalc.BossDamageCalc

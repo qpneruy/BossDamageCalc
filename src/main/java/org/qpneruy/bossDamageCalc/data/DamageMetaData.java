@@ -19,19 +19,15 @@ public class DamageMetaData implements Comparable<DamageMetaData> {
         this.totalDamage = 0.0;
     }
 
-    public void cleanup() {
+    public synchronized void incrementDamage(double damage) {
+        if (damage > 0) this.totalDamage += damage;
 
-        this.player = null;
-        entityData.cleanup();
-        this.entityData = null;
-        this.totalDamage = 0.0;
     }
 
-
-    public synchronized void incrementDamage(double damage) {
-        if (damage > 0) {
-            this.totalDamage += damage;
-        }
+    public void cleanup() {
+        this.player = null;
+        this.entityData = null;
+        this.totalDamage = 0.0;
     }
 
     @Override
@@ -42,8 +38,7 @@ public class DamageMetaData implements Comparable<DamageMetaData> {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DamageMetaData)) return false;
-        DamageMetaData that = (DamageMetaData) o;
+        if (!(o instanceof DamageMetaData that)) return false;
         return playerId.equals(that.playerId);
     }
 
