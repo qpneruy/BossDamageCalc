@@ -1,154 +1,171 @@
-package org.qpneruy.bossDamageCalc.events;
+package org.qpneruy.bossDamageCalc.events
 
-import io.lumine.mythic.bukkit.BukkitAPIHelper;
-import io.lumine.mythic.bukkit.MythicBukkit;
-import io.lumine.mythic.core.mobs.ActiveMob;
-import org.bukkit.Bukkit;
-import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.qpneruy.bossDamageCalc.BossDamageCalc;
-import org.qpneruy.bossDamageCalc.data.ConfigReader;
-import org.qpneruy.bossDamageCalc.data.DamageInfo;
-import org.qpneruy.bossDamageCalc.data.ModData;
+import io.lumine.mythic.bukkit.BukkitAPIHelper
+import io.lumine.mythic.bukkit.MythicBukkit
+import io.lumine.mythic.core.mobs.ActiveMob
+import org.bukkit.Bukkit
+import org.bukkit.entity.LivingEntity
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDeathEvent
+import org.qpneruy.bossDamageCalc.BossDamageCalc
+import org.qpneruy.bossDamageCalc.data.ConfigReader
+import org.qpneruy.bossDamageCalc.data.DamageInfo
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Consumer
+import java.util.logging.Level
+import java.util.stream.Collectors
+import kotlin.math.min
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
+class EventListener(private val plugin: BossDamageCalc) : Listener {
+    private val logger = plugin.logger
 
-public class EventListener implements Listener {
-    private final Logger logger;
-    private static final int MAX_REWARD_RANK = 10;
-
-    private final Map<String, Map<UUID, DamageInfo>> damageData;
-    private final BossDamageCalc plugin;
-    private final ConsoleCommandSender console;
-    private final BukkitAPIHelper apiHelper;
-    private final ConfigReader data;
-
-    public EventListener(BossDamageCalc plugin) {
-        this.plugin = plugin;
-        this.damageData = new ConcurrentHashMap<>();
-        this.logger = plugin.getLogger();
-        this.console = Bukkit.getConsoleSender();
-        this.apiHelper = MythicBukkit.inst().getAPIHelper();
-        this.data = plugin.data;
-    }
+    private val damageData: MutableMap<String, MutableMap<UUID, DamageInfo>> =
+        ConcurrentHashMap()
+    private val console = Bukkit.getConsoleSender()
+    private val apiHelper: BukkitAPIHelper = MythicBukkit.inst().apiHelper
+    private val data: ConfigReader? = plugin.data
 
     @EventHandler
-    public void onEntityDeath(EntityDeathEvent event) {
-        if (!apiHelper.isMythicMob(event.getEntity())) {
-            return;
-        }
-        System.out.println("Checkpoint 5");
-        ActiveMob mythicMob = apiHelper.getMythicMobInstance(event.getEntity());
-        String mobTypeId = mythicMob.getMobType();
-        Map<UUID, DamageInfo> mobDamageData = damageData.get(mobTypeId);
+    fun onEntityDeath(event: EntityDeathEvent) {
+        if (!apiHelper.isMythicMob(event.entity)) return
 
-        if (mobDamageData == null || mobDamageData.isEmpty()) return;
+        val mythicMob = apiHelper.getMythicMobInstance(event.entity)
+        val mobTypeId = mythicMob.mobType
+        val mobDamageData: Map<UUID, DamageInfo>? = damageData[mobTypeId]
 
-        processRewards(mythicMob, mobDamageData);
-        damageData.remove(mobTypeId);
+        if (mobDamageData == null || mobDamageData.isEmpty()) return
+
+        processRewards(mythicMob, mobDamageData)
+        damageData.remove(mobTypeId)
     }
 
-    private void processRewards(ActiveMob mythicMob, Map<UUID, DamageInfo> mobDamageData) {
-        ModData modData = data.getModData(mythicMob.getMobType());
+    private fun processRewards(mythicMob: ActiveMob, mobDamageData: Map<UUID, DamageInfo>) {
+        val modData = data!!.getModData(mythicMob.mobType)
         if (modData == null) {
-            logger.warning("No ModData found for mob type: " + mythicMob.getMobType());
-            return;
+            logger.warning("No ModData found for mob type: " + mythicMob.mobType)
+            return
         }
-        List<DamageInfo> sortedDamagers = sortByTotalDamage(mobDamageData);
-        Map<Integer, List<String>> rewards = modData.getRewards();
-        displayLeaderboard(sortedDamagers);
+        val sortedDamagers = sortByTotalDamage(mobDamageData)
+        val rewards = modData.rewards
+        displayLeaderboard(sortedDamagers)
 
-        for (int rank = 0; rank < Math.min(sortedDamagers.size(), MAX_REWARD_RANK); rank++) {
-            DamageInfo damageInfo = sortedDamagers.get(rank);
-            distributeRewards(damageInfo.getPlayer(), damageInfo, mythicMob, rewards.get(rank + 1));
+        for (rank in 0..<min(sortedDamagers.size.toDouble(), MAX_REWARD_RANK.toDouble()).toInt()) {
+            val damageInfo = sortedDamagers[rank]
+            distributeRewards(damageInfo.player, damageInfo, mythicMob, rewards[rank + 1])
         }
     }
 
-    private void displayLeaderboard(List<DamageInfo> sortedDamagers) {
-        StringBuilder leaderboard = new StringBuilder();
-        leaderboard.append("§e----------[BXH]---------\n");
+    private fun displayLeaderboard(sortedDamagers: List<DamageInfo>) {
+        val leaderboard = StringBuilder()
+        leaderboard.append("§e----------[BXH]---------\n")
 
-        int topPlayers = Math.min(sortedDamagers.size(), 3);
-        for (int i = 0; i < topPlayers; i++) {
-            DamageInfo data = sortedDamagers.get(i);
-            Player player = data.getPlayer();
+        val topPlayers = min(sortedDamagers.size.toDouble(), 3.0).toInt()
+        for (i in 0..<topPlayers) {
+            val data = sortedDamagers[i]
+            val player = data.player
             if (player != null) {
-                leaderboard.append(String.format("    §f%d. §a%s §f- §c%.2f\n",
+                leaderboard.append(
+                    String.format(
+                        "    §f%d. §a%s §f- §c%.2f\n",
                         i + 1,
-                        player.getName(),
-                        data.getTotalDamage()));
+                        player.name,
+                        data.totalDamage
+                    )
+                )
             }
         }
-        leaderboard.append("§e------------------------");
-        String finalMessage = leaderboard.toString();
-        plugin.getServer().getOnlinePlayers().forEach(player ->
-                player.sendMessage(finalMessage));
+        leaderboard.append("§e------------------------")
+        val finalMessage = leaderboard.toString()
+        plugin.server.onlinePlayers.forEach { player: Player -> player.sendMessage(finalMessage) }
     }
 
-    private void distributeRewards(Player player, DamageInfo damageInfo, ActiveMob mythicMob, List<String> rewards) {
-        if (rewards == null || rewards.isEmpty()) {
-            return;
-        }
-        player.sendMessage(String.format("You did %.2f damage to %s",
-                damageInfo.getTotalDamage(),
-                mythicMob.getDisplayName()));
+    private fun distributeRewards(
+        player: Player,
+        damageInfo: DamageInfo,
+        mythicMob: ActiveMob,
+        rewards: List<String>?
+    ) {
+        if (rewards.isNullOrEmpty()) return
 
-        rewards.forEach(reward -> Bukkit.dispatchCommand(console, reward.replace("{ten}", player.getName())));
+        player.sendMessage(
+            String.format(
+                "You did %.2f damage to %s",
+                damageInfo.totalDamage,
+                mythicMob.displayName
+            )
+        )
+
+        rewards.forEach(Consumer { reward: String ->
+            Bukkit.dispatchCommand(
+                console,
+                reward.replace("{ten}", player.name)
+            )
+        })
     }
 
 
     @EventHandler
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player player) ||
-                !(event.getEntity() instanceof LivingEntity entity)) return;
+    fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
+        if (event.damager !is Player || event.entity !is LivingEntity) return
 
-        if (!apiHelper.isMythicMob(entity)) return;
+        if (!apiHelper.isMythicMob(event.entity)) return
 
 
-        ActiveMob mythicMob = apiHelper.getMythicMobInstance(entity);
-        String mobTypeId = mythicMob.getMobType();
+        val mythicMob = apiHelper.getMythicMobInstance(event.entity)
+        val mobTypeId = mythicMob.mobType
 
-        if (data.getModData(mobTypeId) == null) return;
-        updateDamageData(player, event.getDamage(), mobTypeId, mythicMob);
+        if (data!!.getModData(mobTypeId) == null) return
+        updateDamageData((event.damager as Player).getPlayer(), event.damage, mobTypeId, mythicMob)
     }
 
-    private void updateDamageData(Player player, double damage, String mobTypeId, ActiveMob mythicMob) {
-        damageData.computeIfAbsent(mobTypeId, k -> new ConcurrentHashMap<>());
+    private fun updateDamageData(player: Player?, damage: Double, mobTypeId: String, mythicMob: ActiveMob) {
+        damageData.computeIfAbsent(mobTypeId) { k: String? -> ConcurrentHashMap() }
 
-        Map<UUID, DamageInfo> mobDamageData = damageData.get(mobTypeId);
-        DamageInfo playerDamageData = mobDamageData.computeIfAbsent(
-                player.getUniqueId(),
-                k -> new DamageInfo(player, data.getModData(mobTypeId))
-        );
+        val mobDamageData = damageData[mobTypeId]!!
+        val playerDamageData = player?.let {
+            mobDamageData.computeIfAbsent(
+                it.uniqueId
+            ) { k: UUID? -> DamageInfo(player, data!!.getModData(mobTypeId)) }
+        }
 
-        playerDamageData.incrementDamage(damage);
-        if (logger.isLoggable(java.util.logging.Level.FINE)) {
-            logger.fine(String.format("Player %s dealt %.2f damage to %s (Total: %.2f)",
-                    player.getName(), damage, mythicMob.getDisplayName(),
-                    playerDamageData.getTotalDamage()));
+        if (playerDamageData != null) {
+            playerDamageData.incrementDamage(damage)
+        }
+        if (logger.isLoggable(Level.FINE)) {
+            if (playerDamageData != null) {
+                logger.fine(
+                    String.format(
+                        "Player %s dealt %.2f damage to %s (Total: %.2f)",
+                        player.name, damage, mythicMob.displayName,
+                        playerDamageData.totalDamage
+                    )
+                )
+            }
         }
     }
 
-    private static List<DamageInfo> sortByTotalDamage(Map<UUID, DamageInfo> map) {
-        return map.values()
-                .stream()
-                .sorted(Collections.reverseOrder())
-                .collect(Collectors.toList());
+    fun cleanup() {
+        damageData.values.forEach(Consumer<Map<UUID, DamageInfo>> { mobData: Map<UUID, DamageInfo> ->
+            mobData.values.forEach(
+                Consumer { obj: DamageInfo -> obj.cleanup() })
+        })
+        damageData.clear()
+
+        logger.info("EventListener resources cleaned up successfully")
     }
 
-    public void cleanup() {
-        damageData.values().forEach(mobData ->
-                mobData.values().forEach(DamageInfo::cleanup));
-        damageData.clear();
+    companion object {
+        private const val MAX_REWARD_RANK = 10
 
-        logger.info("EventListener resources cleaned up successfully");
+        private fun sortByTotalDamage(map: Map<UUID, DamageInfo>): List<DamageInfo> {
+            return map.values
+                .stream()
+                .sorted(Collections.reverseOrder())
+                .collect(Collectors.toList())
+        }
     }
 }

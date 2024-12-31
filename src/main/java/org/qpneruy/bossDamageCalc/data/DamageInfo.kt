@@ -1,49 +1,47 @@
-package org.qpneruy.bossDamageCalc.data;
+package org.qpneruy.bossDamageCalc.data
 
-import lombok.Getter;
-import org.bukkit.entity.Player;
-
-import java.util.UUID;
+import lombok.Getter
+import org.bukkit.entity.Player
+import java.util.*
+import kotlin.concurrent.Volatile
 
 @Getter
-public class DamageInfo implements Comparable<DamageInfo> {
-    private final UUID playerId;
-    private Player player;
-    private ModData entityData;
-    private volatile double totalDamage;
+class DamageInfo(player: Player, entityData: ModData?) : Comparable<DamageInfo> {
+    private val playerId: UUID
+    public var player: Player
+    private var entityData: ModData?
 
-    public DamageInfo(Player player, ModData entityData) {
-        this.player = player;
-        this.playerId = player.getUniqueId();
-        this.entityData = entityData;
-        this.totalDamage = 0.0;
+    @Volatile
+    var totalDamage: Double
+
+    init {
+        this.player = player
+        this.playerId = player.uniqueId
+        this.entityData = entityData
+        this.totalDamage = 0.0
     }
 
-    public synchronized void incrementDamage(double damage) {
-        if (damage > 0) this.totalDamage += damage;
-
+    @Synchronized
+    fun incrementDamage(damage: Double) {
+        if (damage > 0) this.totalDamage += damage
     }
 
-    public void cleanup() {
-        this.player = null;
-        this.entityData = null;
-        this.totalDamage = 0.0;
+    fun cleanup() {
+        this.entityData = null
+        this.totalDamage = 0.0
     }
 
-    @Override
-    public int compareTo(DamageInfo other) {
-        return Double.compare(this.totalDamage, other.totalDamage);
+    override fun compareTo(other: DamageInfo): Int {
+        return java.lang.Double.compare(this.totalDamage, other.totalDamage)
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof DamageInfo that)) return false;
-        return playerId.equals(that.playerId);
+    override fun equals(o: Any?): Boolean {
+        if (this === o) return true
+        if (o !is DamageInfo) return false
+        return playerId == o.playerId
     }
 
-    @Override
-    public int hashCode() {
-        return playerId.hashCode();
+    override fun hashCode(): Int {
+        return playerId.hashCode()
     }
 }

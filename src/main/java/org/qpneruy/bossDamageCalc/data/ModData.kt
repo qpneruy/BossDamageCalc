@@ -1,22 +1,13 @@
-package org.qpneruy.bossDamageCalc.data;
+package org.qpneruy.bossDamageCalc.data
 
-import lombok.Getter;
-import java.util.List;
-import java.util.Map;
+import lombok.Getter
+import java.util.function.Consumer
 
 @Getter
-public class ModData {
-    private String modId;
-    private final Map<Integer, List<String>> rewards;
-
-    public ModData(String modId, Map<Integer, List<String>> rewards) {
-        this.modId = modId;
-        this.rewards = rewards;
-    }
-
-    public void cleanup() {
-        rewards.values().forEach(List::clear);
-        rewards.clear();
-        this.modId = null;
+class ModData(private var modId: String?, val rewards: MutableMap<Int, List<String>?>) {
+    fun cleanup() {
+        rewards.values.forEach { obj: List<String>? -> (obj as? MutableList<String>)?.clear() }
+        rewards.clear()
+        this.modId = null
     }
 }

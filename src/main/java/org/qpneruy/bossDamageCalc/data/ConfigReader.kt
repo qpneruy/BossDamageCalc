@@ -1,82 +1,77 @@
-package org.qpneruy.bossDamageCalc.data;
+package org.qpneruy.bossDamageCalc.data
 
-import com.moandjiezana.toml.Toml;
-import org.qpneruy.bossDamageCalc.BossDamageCalc;
+import com.moandjiezana.toml.Toml
+import org.qpneruy.bossDamageCalc.BossDamageCalc
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Consumer
+import java.util.logging.Logger
 
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+class ConfigReader(plugin: BossDamageCalc) {
+    private val modDataMap: ConcurrentHashMap<String, ModData> = ConcurrentHashMap(INITIAL_CAPACITY)
+    private val configPath: Path = Path.of(plugin.dataFolder.path, "config.toml")
+    private val logger: Logger = plugin.logger
 
-public class ConfigReader {
-    private final ConcurrentHashMap<String, ModData> modDataMap;
-    private static final int INITIAL_CAPACITY = 16;
-    private final Path configPath;
-    private final Logger logger;
-
-    public ConfigReader(BossDamageCalc plugin) {
-        this.modDataMap = new ConcurrentHashMap<>(INITIAL_CAPACITY);
-        this.configPath = Path.of(plugin.getDataFolder().getPath(), "config.toml");
-        this.logger = plugin.getLogger();
-        loadConfig();
+    init {
+        loadConfig()
     }
 
-    public void reload() {
-        loadConfig();
+    fun reload() {
+        loadConfig()
     }
 
-    private void loadConfig() {
+    private fun loadConfig() {
         try {
-            Map<String, Object> tables = new Toml().read(configPath.toFile()).toMap();
-            processConfigTables(tables);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load config file: " + configPath, e);
+            val tables = Toml().read(configPath.toFile()).toMap()
+            processConfigTables(tables)
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to load config file: $configPath", e)
         }
     }
 
-    private void processConfigTables(Map<String, Object> tables) {
-        modDataMap.clear();
+    private fun processConfigTables(tables: Map<String, Any>) {
+        modDataMap.clear()
 
-        for (Map.Entry<String, Object> entry : tables.entrySet()) {
-            if (entry.getValue() instanceof Map) {
-                processTable((Map<String, Object>) entry.getValue());
+        for ((_, value) in tables) {
+            if (value is Map<*, *>) {
+                processTable(value as Map<String, Any>)
             }
         }
     }
 
-    private void processTable(Map<String, Object> table) {
-        Object modIdObj = table.get("ModId");
-        if (modIdObj instanceof String modId && table.containsKey("Rewards")) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> rewardsList = (List<Map<String, Object>>) table.get("Rewards");
-            HashMap<Integer, List<String>> rewardsMap = processRewards(rewardsList, rewardsList.size());
-            ModData modData = new ModData(modId, rewardsMap);
-            modDataMap.put(modId, modData);
+    private fun processTable(table: Map<String, Any>) {
+        val modIdObj = table["ModId"]
+        if (modIdObj is String && table.containsKey("Rewards")) {
+            val rewardsList = table["Rewards"] as List<Map<String, Any>>?
+            val rewardsMap = processRewards(rewardsList!!, rewardsList.size)
+            val modData = ModData(modIdObj, rewardsMap)
+            modDataMap[modIdObj] = modData
         }
     }
 
-    private HashMap<Integer, List<String>> processRewards(List<Map<String, Object>> rewardsList, int size) {
-        HashMap<Integer, List<String>> rewardsMap = new HashMap<>(size);
+    private fun processRewards(rewardsList: List<Map<String, Any>>, size: Int): HashMap<Int, List<String>?> {
+        val rewardsMap = HashMap<Int, List<String>?>(size)
 
-        for (Map<String, Object> reward : rewardsList) {
-            int rank = ((Number) reward.get("Rank")).intValue();
-            @SuppressWarnings("unchecked")
-            List<String> rewards = (List<String>) reward.get("Rewards");
-            rewardsMap.put(rank, rewards);
+        for (reward in rewardsList) {
+            val rank = (reward["Rank"] as Number).toInt()
+            val rewards = reward["Rewards"] as List<String>?
+            rewardsMap[rank] = rewards
         }
 
-        return rewardsMap;
+        return rewardsMap
     }
 
-    public ModData getModData(String modId) {
-        return modDataMap.get(modId);
+    fun getModData(modId: String): ModData? {
+        return modDataMap[modId]
     }
 
-    public void cleanup() {
-        modDataMap.values().forEach(ModData::cleanup);
-        modDataMap.clear();
-        logger.info("ConfigReader resources cleaned up successfully");
+    fun cleanup() {
+        modDataMap.values.forEach(Consumer { obj: ModData -> obj.cleanup() })
+        modDataMap.clear()
+        logger.info("ConfigReader resources cleaned up successfully")
+    }
+
+    companion object {
+        private const val INITIAL_CAPACITY = 16
     }
 }

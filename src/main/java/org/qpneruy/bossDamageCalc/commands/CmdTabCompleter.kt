@@ -1,24 +1,25 @@
-package org.qpneruy.bossDamageCalc.commands;
+package org.qpneruy.bossDamageCalc.commands
 
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.qpneruy.bossDamageCalc.BossDamageCalc;
+import org.bukkit.command.Command
+import org.bukkit.command.CommandSender
+import org.bukkit.command.TabCompleter
+import org.qpneruy.bossDamageCalc.BossDamageCalc
+import java.util.*
 
-import java.util.List;
-import java.util.Objects;
-
-public class CmdTabCompleter implements TabCompleter {
-    public CmdTabCompleter(BossDamageCalc plugin) {
-        Objects.requireNonNull(plugin.getCommand("bossDamageCalc")).setTabCompleter(this);
+class CmdTabCompleter(plugin: BossDamageCalc) : TabCompleter {
+    init {
+        Objects.requireNonNull(plugin.getCommand("bossDamageCalc"))?.tabCompleter = this
     }
-    @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
-        if (strings.length == 1) {
-            return List.of("reload");
+
+    override fun onTabComplete(
+        commandSender: CommandSender,
+        command: Command,
+        s: String,
+        strings: Array<String>
+    ): List<String> {
+        if (strings.size == 1) {
+            return listOf("reload")
         }
-        return List.of();
+        return listOf()
     }
 }

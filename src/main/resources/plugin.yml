@@ -4,6 +4,7 @@ main: org.qpneruy.bossDamageCalc.BossDamageCalc
 api-version: '1.20'
 authors: [ qpneruy ]
 description: Plugin Tính Damage đánh Boss, Bản Quyền của TST - TaoSinhTon
+depend: [MythicMobs]
 
 commands:
   bossDamageCalc:
