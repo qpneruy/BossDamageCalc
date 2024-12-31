@@ -21,10 +21,10 @@ public final class BossDamageCalc extends JavaPlugin {
         if (!this.getDataFolder().exists()){
             if(!this.getDataFolder().mkdir())
                 getLogger().severe("Failed to create plugin directory.");
+            saveResource("config.toml", false);
         }
-        saveResource("config.toml", false);
-        Hooks();
 
+        Hooks();
         new BossDamageCalcCmd(this);
         new CmdTabCompleter(this);
 
@@ -41,11 +41,12 @@ public final class BossDamageCalc extends JavaPlugin {
     private void Hooks() {
         if (this.getServer().getPluginManager().isPluginEnabled("MythicMobs")){
             getLogger().info("Successful Hook into MythicMobs!");
+            this.data = new ConfigReader(this);
             this.eventListener = new EventListener(this);
         } else {
             getLogger().info("MythicMobs not found! Disabling plugin");
         }
-        this.data = new ConfigReader(this);
+
     }
 
     private void StartupLog() {

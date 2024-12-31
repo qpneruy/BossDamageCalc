@@ -45,14 +45,12 @@ public class EventListener implements Listener {
         if (!apiHelper.isMythicMob(event.getEntity())) {
             return;
         }
-
+        System.out.println("Checkpoint 5");
         ActiveMob mythicMob = apiHelper.getMythicMobInstance(event.getEntity());
         String mobTypeId = mythicMob.getMobType();
         Map<UUID, DamageInfo> mobDamageData = damageData.get(mobTypeId);
 
-        if (mobDamageData == null || mobDamageData.isEmpty()) {
-            return;
-        }
+        if (mobDamageData == null || mobDamageData.isEmpty()) return;
 
         processRewards(mythicMob, mobDamageData);
         damageData.remove(mobTypeId);
@@ -64,20 +62,13 @@ public class EventListener implements Listener {
             logger.warning("No ModData found for mob type: " + mythicMob.getMobType());
             return;
         }
-
         List<DamageInfo> sortedDamagers = sortByTotalDamage(mobDamageData);
         Map<Integer, List<String>> rewards = modData.getRewards();
         displayLeaderboard(sortedDamagers);
 
         for (int rank = 0; rank < Math.min(sortedDamagers.size(), MAX_REWARD_RANK); rank++) {
             DamageInfo damageInfo = sortedDamagers.get(rank);
-            Player player = damageInfo.getPlayer();
-
-            if (player == null || !player.isOnline()) {
-                continue;
-            }
-
-            distributeRewards(player, damageInfo, mythicMob, rewards.get(rank + 1));
+            distributeRewards(damageInfo.getPlayer(), damageInfo, mythicMob, rewards.get(rank + 1));
         }
     }
 
@@ -106,7 +97,6 @@ public class EventListener implements Listener {
         if (rewards == null || rewards.isEmpty()) {
             return;
         }
-
         player.sendMessage(String.format("You did %.2f damage to %s",
                 damageInfo.getTotalDamage(),
                 mythicMob.getDisplayName()));
@@ -118,9 +108,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (!(event.getDamager() instanceof Player player) ||
-                !(event.getEntity() instanceof LivingEntity entity)) {
-            return;
-        }
+                !(event.getEntity() instanceof LivingEntity entity)) return;
 
         if (!apiHelper.isMythicMob(entity)) return;
 
@@ -129,7 +117,6 @@ public class EventListener implements Listener {
         String mobTypeId = mythicMob.getMobType();
 
         if (data.getModData(mobTypeId) == null) return;
-
         updateDamageData(player, event.getDamage(), mobTypeId, mythicMob);
     }
 
@@ -143,7 +130,6 @@ public class EventListener implements Listener {
         );
 
         playerDamageData.incrementDamage(damage);
-
         if (logger.isLoggable(java.util.logging.Level.FINE)) {
             logger.fine(String.format("Player %s dealt %.2f damage to %s (Total: %.2f)",
                     player.getName(), damage, mythicMob.getDisplayName(),
